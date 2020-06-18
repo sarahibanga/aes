@@ -4,7 +4,7 @@ extern crate num_bigint;
 use num_bigint::BigUint;
 
 // Rijndael Substitution Box
-const sbox: [u8; 256] = [
+const sbox: [i64; 256] = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
     0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -173,22 +173,22 @@ impl AES {
         }
 
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w0.get_mut(i1).unwrap(), 16).unwrap()];
+            let tmp = sbox[i64::from_str_radix(&w0.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w0.remove(i1); //remove current element at index
             w0.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w1.get_mut(i1).unwrap(), 16).unwrap()];
+            let tmp = sbox[i64::from_str_radix(&w1.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w1.remove(i1); //remove current element at index
             w1.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w2.get_mut(i1).unwrap(), 16).unwrap()];
+            let tmp = sbox[i64::from_str_radix(&w2.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w2.remove(i1); //remove current element at index
             w2.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w3.get_mut(i1).unwrap(), 16).unwrap()];
+            let tmp = sbox[i64::from_str_radix(&w3.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w3.remove(i1); //remove current element at index
             w3.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
@@ -469,7 +469,7 @@ impl AES {
 
         //2.Byte Substitution with S-Box
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(gw3.get_mut(i1).unwrap().as_ref(), 16).unwrap()];
+            let tmp = sbox[i64::from_str_radix(gw3.get_mut(i1).unwrap().as_ref(), 16).unwrap() as usize];
             gw3.remove(i1); //remove current element at index
             gw3.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
