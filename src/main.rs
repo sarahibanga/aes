@@ -49,7 +49,7 @@ impl AES {
     }
 
     /// Right-pad message (if needed)
-    fn padding(&self) {
+    fn padding(&mut self) {
         let mut i = 0;
 
         let padding_modulo = self.plaintext.len() % 32;
@@ -65,7 +65,7 @@ impl AES {
     }
 
     /// Chunk the plaintext into "states"
-    fn create_states(&self) {
+    fn create_states(&mut self) {
         self.states = self
             .plaintext
             .as_bytes()
@@ -76,11 +76,11 @@ impl AES {
             .collect();
     }
 
-    fn update_state(&self, new_state: String, index: usize) {
+    fn update_state(&mut self, new_state: String, index: usize) {
         self.states[index] = new_state;
     }
 
-    fn update_cipher(&self, s: String) {
+    fn update_cipher(&mut self, s: &String) {
         let mut rs = String::new();
 
         for ii in &[0, 8, 16, 24] {
@@ -107,49 +107,47 @@ impl AES {
     }
 
     /// Performs AES-128. Returns updated cipher.
-    fn execute_aes(&self) -> String {
+    fn execute_aes(&mut self) {
         self.padding();
         self.create_states();
 
         // Loop over states
         for ind in 0..self.states.len() {
             let mut kw = Vec::with_capacity(11);
-            let mut state = self.states[ind];
+            let state = self.states[ind].clone();
 
             /*Step 1: Key expansion (Make the keys for all rounds + 1 more)*/
-            kw[0] = self.key;
+            kw[0] = self.key.clone();
 
             for i in 1..11 {
-                kw[i] = self.create_keys(kw[i - 1], i);
+                kw[i] = self.create_keys(&kw[i - 1], i);
             }
 
             //Step 2 : Initial Round
-            self.update_state(self.addroundkey(kw[0], state), ind);
+            self.update_state(self.addroundkey(&kw[0], &state), ind);
 
             //Step 3 : Rounds
             for i in 1..10 {
-                self.update_state(self.SubBytes(state), ind);
-                self.update_state(self.ShiftRows(state), ind);
-                self.update_state(self.MixColumns(state), ind);
-                self.update_state(self.addroundkey(kw[i], state), ind);
+                self.update_state(self.SubBytes(&state), ind);
+                self.update_state(self.ShiftRows(&state), ind);
+                self.update_state(self.MixColumns(&state), ind);
+                self.update_state(self.addroundkey(&kw[i], &state), ind);
             }
 
             //Step 4:Final Round(no Mix Columns)
-            self.update_state(self.SubBytes(state), ind);
-            self.update_state(self.ShiftRows(state), ind);
+            self.update_state(self.SubBytes(&state), ind);
+            self.update_state(self.ShiftRows(&state), ind);
 
             // read string by each column instead of across rows (TODO: Check if I need shelp)
-            self.update_state(shelp(state), ind);
-            self.update_state(self.addroundkey(kw[10], state), ind);
+            self.update_state(shelp(&state), ind);
+            self.update_state(self.addroundkey(&kw[10], &state), ind);
 
             //cipher text added to by columns
-            self.update_cipher(state);
+            self.update_cipher(&state);
         }
-
-        self.cipher
     }
     /// Replace each byte with another according to a substitution box
-    fn SubBytes(&self, state: String) -> String {
+    fn SubBytes(&self, state: &String) -> String {
         let mut res = String::new();
         let mut w0 = Vec::new(); // 1st row
         let mut w1 = Vec::new(); // 2nd row
@@ -209,7 +207,7 @@ impl AES {
         res
     }
 
-    fn ShiftRows(&self, state: String) -> String {
+    fn ShiftRows(&self, state: &String) -> String {
         //wikipedia: last three state rows of the state are shifted cyclically by 1, 2, and 3
         let mut res = String::new();
         let mut w0 = Vec::new(); //1st row
@@ -235,26 +233,11 @@ impl AES {
 
         //First row is untouched
         //Second row is shifted cyclically to the left
-        let mut temp = w1.get_mut(0).unwrap();
-        w1.remove(0);
-        w1.push(temp);
+        w1.rotate_left(1);
         //Third row is shifted cyclically to the left 2 times
-        let mut temp2 = w2.get_mut(0).unwrap();
-        w2.remove(0);
-        w2.push(temp2); //now shifted once
-        let mut temp3 = w2.get_mut(0).unwrap();
-        w2.remove(0);
-        w2.push(temp3); //now shifted twice
-                        //Third row is shifted cyclically to the left 2 times
-        let mut temp4 = w3.get_mut(0).unwrap();
-        w3.remove(0);
-        w3.push(temp4); //now shifted once
-        let mut temp5 = w3.get_mut(0).unwrap();
-        w3.remove(0);
-        w3.push(temp5); //now shifted twice
-        let mut temp6 = w3.get_mut(0).unwrap();
-        w3.remove(0);
-        w3.push(temp6); //now shifted three times
+        w2.rotate_left(2);
+       	//Last row is shifted cyclically to the left 3 times
+        w3.rotate_left(3);
 
         for i in &w0 {
             res += &i;
@@ -274,8 +257,8 @@ impl AES {
     }
 
     /// Mixing Operation that operates on the columns of the state, combining the four bytes in each column.
-    fn MixColumns(&self, state: String) -> String {
-        let ii = 0;
+    fn MixColumns(&self, state: &String) -> String {
+        let mut ii = 0;
         let mut b = Vec::with_capacity(16);
 
         while ii < 32 {
@@ -382,12 +365,12 @@ impl AES {
         res
     }
 
-    /// Combine each byte of the state with a blokck of the round key using bitwise xor.
+    /// Combine each byte of the state with a block of the round key using bitwise xor.
     /// Important Note: key string will be changed to be by column
-    fn addroundkey(&self, key: String, state: String) -> String {
-        let keymat = String::new();
-        let smat = String::new();
-        let res = String::new();
+    fn addroundkey(&self, key: &String, state: &String) -> String {
+        let mut keymat = String::new();
+        let mut smat = String::new();
+        let mut res = String::new();
 
         //for key
         for ii in &[0, 8, 16, 24] {
@@ -434,7 +417,7 @@ impl AES {
         res
     }
 
-    fn create_keys(&self, key: String, roundcnt: usize) -> String {
+    fn create_keys(&mut self, key: &String, roundcnt: usize) -> String {
         let mut w0: Vec<String> = Vec::with_capacity(4);
         let mut w1: Vec<String> = Vec::with_capacity(4);
         let mut w2: Vec<String> = Vec::with_capacity(4);
@@ -463,9 +446,7 @@ impl AES {
         }
 
         //1.circular byte left shift on w3
-        let mut temp = gw3.get_mut(0).unwrap();
-        gw3.remove(0);
-        gw3.push(temp.to_string());
+        gw3.rotate_left(1);
 
         //2.Byte Substitution with S-Box
         for i1 in 0..4 {
@@ -525,7 +506,7 @@ impl AES {
 // ################################### Helper functions ###################################
 pub fn hbit(a: i64) -> i64 {
     //Do a left shift
-    let c = a << 1;
+    let mut c = a << 1;
 
     //check if high bit is 1 or not
     if (a & 0x80) == 0x80 {
@@ -535,7 +516,7 @@ pub fn hbit(a: i64) -> i64 {
     c
 }
 
-pub fn shelp(s: String) -> String {
+pub fn shelp(s: &String) -> String {
     let mut rs = String::new();
     for ii in &[0, 8, 16, 24] {
         //first column
@@ -572,7 +553,9 @@ mod tests {
         println!("Example 1:");
         println!("Key: {}", key);
         println!("Plaintext: {}", plaintext);
-        let cipher = AES::new(key, plaintext).execute_aes();
+        let aes = AES::new(key, plaintext);
+        aes.execute_aes();
+        let cipher = aes.cipher;
         println!("Ciphertext: {}", cipher);
         let expected_ciphertext = "9A1AF35C9823EE1CC888A1C8090460B2";
         assert_eq!(expected_ciphertext, cipher);
@@ -587,7 +570,9 @@ mod tests {
         println!("Example 2:");
         println!("Key: {}", key);
         println!("Plaintext: {}", plaintext);
-        let cipher = AES::new(key, plaintext).execute_aes();
+        let aes = AES::new(key, plaintext);
+        aes.execute_aes();
+        let cipher = aes.cipher;
         println!("Ciphertext: {}", cipher);
         let expected_ciphertext = "FF0B844A0853BF7C6934AB4364148FB9";
         assert_eq!(expected_ciphertext, cipher);
