@@ -1,8 +1,8 @@
 # AES-128
 
-## Background 
-### Undergraduate Course: Computers and Network Security
-### Task: Implement part of AES-128 using any language.
+### Overview 
+#### Undergraduate Course: Computers and Network Security
+#### Task: Implement part of AES-128 using any language.
 
 ## References
 ### 1. [Rijndael (AES) S-box](http://www.samiam.org/s-box.html)
