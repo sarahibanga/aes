@@ -1,8 +1,9 @@
 # AES-128
 
-### Overview 
-#### Undergraduate Course: Computers and Network Security
-#### Task: Implement part of AES-128 using any language.
+## Overview 
+- This repository implements `Advanced Encryption Standard` with a key length of `128-bits` to encrypt a block of messages.
+- The original code in `Java` was a final project for undergraduate course `Computers and Network Security (CSE 178)` at `University of California, Merced`
+- Currently, this repository focuses on encryption. Later iterations might also implement decryption.
 
 ## References
 ### 1. [Rijndael (AES) S-box](http://www.samiam.org/s-box.html)
