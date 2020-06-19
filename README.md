@@ -11,5 +11,4 @@
 ### 5. [Rijndael MixColumns Operation - Wikipedia](https://en.wikipedia.org/wiki/Rijndael_MixColumns)
 ### 6. [MixColumns Operation - Stack Exchange](https://crypto.stackexchange.com/questions/2402/how-to-solve-mixcolumns)
 ### 7. [AES Step-by-Step Examples](https://kavaliro.com/wp-content/uploads/2014/03/AES.pdf)
-### 8. [AES Calculator](http://testprotect.com/appendix/AEScalc) 
-#### - Purpose: Find and verify ciphertext with AES Calculator
+### 8. [AES Calculator](http://testprotect.com/appendix/AEScalc)
