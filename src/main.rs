@@ -1,10 +1,11 @@
+#![allow(dead_code)] // Suppress warnings until main is populated. In Rust, tests are evaluated separately.
 use std::i64;
 use std::str;
 extern crate num_bigint;
 use num_bigint::BigUint;
 
 // Rijndael Substitution Box
-const sbox: [i64; 256] = [
+const SBOX: [i64; 256] = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
     0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -24,7 +25,7 @@ const sbox: [i64; 256] = [
 ];
 
 // Round constant
-const rcon: [i64; 11] = [
+const RCON: [i64; 11] = [
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c,
 ];
 
@@ -80,7 +81,7 @@ impl AES {
         self.states[index] = new_state;
     }
 
-    fn update_cipher(&mut self, s: &String) {
+    fn update_cipher(&mut self, s: &str) {
         let mut rs = String::new();
 
         for ii in &[0, 8, 16, 24] {
@@ -127,16 +128,16 @@ impl AES {
             self.update_state(self.addroundkey(&kw[0], &state), ind);
 
             //Step 3 : Rounds
-            for i in 1..10 {
-                self.update_state(self.SubBytes(&state), ind);
-                self.update_state(self.ShiftRows(&state), ind);
-                self.update_state(self.MixColumns(&state), ind);
-                self.update_state(self.addroundkey(&kw[i], &state), ind);
+            for round_key in kw.iter().take(10).skip(1) {
+                self.update_state(self.sub_bytes(&state), ind);
+                self.update_state(self.shift_rows(&state), ind);
+                self.update_state(self.mix_columns(&state), ind);
+                self.update_state(self.addroundkey(&round_key, &state), ind);
             }
 
             //Step 4:Final Round(no Mix Columns)
-            self.update_state(self.SubBytes(&state), ind);
-            self.update_state(self.ShiftRows(&state), ind);
+            self.update_state(self.sub_bytes(&state), ind);
+            self.update_state(self.shift_rows(&state), ind);
 
             // read string by each column instead of across rows (TODO: Check if I need shelp)
             self.update_state(shelp(&state), ind);
@@ -147,7 +148,7 @@ impl AES {
         }
     }
     /// Replace each byte with another according to a substitution box
-    fn SubBytes(&self, state: &String) -> String {
+    fn sub_bytes(&self, state: &str) -> String {
         let mut res = String::new();
         let mut w0 = Vec::new(); // 1st row
         let mut w1 = Vec::new(); // 2nd row
@@ -171,22 +172,22 @@ impl AES {
         }
 
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w0.get_mut(i1).unwrap(), 16).unwrap() as usize];
+            let tmp = SBOX[i64::from_str_radix(&w0.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w0.remove(i1); //remove current element at index
             w0.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w1.get_mut(i1).unwrap(), 16).unwrap() as usize];
+            let tmp = SBOX[i64::from_str_radix(&w1.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w1.remove(i1); //remove current element at index
             w1.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w2.get_mut(i1).unwrap(), 16).unwrap() as usize];
+            let tmp = SBOX[i64::from_str_radix(&w2.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w2.remove(i1); //remove current element at index
             w2.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(&w3.get_mut(i1).unwrap(), 16).unwrap() as usize];
+            let tmp = SBOX[i64::from_str_radix(&w3.get_mut(i1).unwrap(), 16).unwrap() as usize];
             w3.remove(i1); //remove current element at index
             w3.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
@@ -207,7 +208,7 @@ impl AES {
         res
     }
 
-    fn ShiftRows(&self, state: &String) -> String {
+    fn shift_rows(&self, state: &str) -> String {
         //wikipedia: last three state rows of the state are shifted cyclically by 1, 2, and 3
         let mut res = String::new();
         let mut w0 = Vec::new(); //1st row
@@ -257,7 +258,7 @@ impl AES {
     }
 
     /// Mixing Operation that operates on the columns of the state, combining the four bytes in each column.
-    fn MixColumns(&self, state: &String) -> String {
+    fn mix_columns(&self, state: &str) -> String {
         let mut ii = 0;
         let mut b = Vec::with_capacity(16);
 
@@ -367,7 +368,7 @@ impl AES {
 
     /// Combine each byte of the state with a block of the round key using bitwise xor.
     /// Important Note: key string will be changed to be by column
-    fn addroundkey(&self, key: &String, state: &String) -> String {
+    fn addroundkey(&self, key: &str, state: &str) -> String {
         let mut keymat = String::new();
         let mut smat = String::new();
         let mut res = String::new();
@@ -417,7 +418,7 @@ impl AES {
         res
     }
 
-    fn create_keys(&mut self, key: &String, roundcnt: usize) -> String {
+    fn create_keys(&mut self, key: &str, roundcnt: usize) -> String {
         let mut w0: Vec<String> = Vec::with_capacity(4);
         let mut w1: Vec<String> = Vec::with_capacity(4);
         let mut w2: Vec<String> = Vec::with_capacity(4);
@@ -450,14 +451,14 @@ impl AES {
 
         //2.Byte Substitution with S-Box
         for i1 in 0..4 {
-            let tmp = sbox[i64::from_str_radix(gw3.get_mut(i1).unwrap().as_ref(), 16).unwrap() as usize];
+            let tmp = SBOX[i64::from_str_radix(gw3.get_mut(i1).unwrap().as_ref(), 16).unwrap() as usize];
             gw3.remove(i1); //remove current element at index
             gw3.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
 
         //3.Add Round Constant (to the first index only)
         let tep = i64::from_str_radix(gw3.get_mut(0).unwrap().as_ref(), 16).unwrap()
-            ^ (rcon[roundcnt - 1]);
+            ^ (RCON[roundcnt - 1]);
         gw3.remove(0); //remove current element at index
         gw3.insert(0, format!("{:02X}", tep)); //add to index and shift other elements
 
@@ -510,13 +511,13 @@ pub fn hbit(a: i64) -> i64 {
 
     //check if high bit is 1 or not
     if (a & 0x80) == 0x80 {
-        c = c ^ 0x1b;
+        c ^= 0x1b;
     }
 
     c
 }
 
-pub fn shelp(s: &String) -> String {
+pub fn shelp(s: &str) -> String {
     let mut rs = String::new();
     for ii in &[0, 8, 16, 24] {
         //first column
@@ -553,7 +554,7 @@ mod tests {
         println!("Example 1:");
         println!("Key: {}", key);
         println!("Plaintext: {}", plaintext);
-        let aes = AES::new(key, plaintext);
+        let mut aes = AES::new(key, plaintext);
         aes.execute_aes();
         let cipher = aes.cipher;
         println!("Ciphertext: {}", cipher);
@@ -570,7 +571,7 @@ mod tests {
         println!("Example 2:");
         println!("Key: {}", key);
         println!("Plaintext: {}", plaintext);
-        let aes = AES::new(key, plaintext);
+        let mut aes = AES::new(key, plaintext);
         aes.execute_aes();
         let cipher = aes.cipher;
         println!("Ciphertext: {}", cipher);
