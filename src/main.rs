@@ -81,8 +81,12 @@ impl AES {
         self.states[index] = new_state;
     }
 
-    fn update_cipher(&mut self, s: &str) {
+    fn update_cipher(&mut self) {
         let mut rs = String::new();
+        let mut s = "".to_string();
+        if let Some(x) = self.states.last() {
+            s = x.to_string();
+        }
 
         for ii in &[0, 8, 16, 24] {
             //first column
@@ -115,10 +119,7 @@ impl AES {
         // Loop over states
         for ind in 0..self.states.len() {
             let mut kw = Vec::with_capacity(11);
-            let state = self.states[ind].clone();
-
             /*Step 1: Key expansion (Make the keys for all rounds + 1 more)*/
-
             kw.insert(0, self.key.clone());
 
             for i in 1..11 {
@@ -126,35 +127,37 @@ impl AES {
             }
 
             //Step 2 : Initial Round
-            self.update_state(self.addroundkey(&kw[0], &state), ind);
+            self.update_state(self.addroundkey(&kw[0], ind), ind);
 
             //Step 3 : Rounds
             for round_key in kw.iter().take(10).skip(1) {
-                self.update_state(self.sub_bytes(&state), ind);
-                self.update_state(self.shift_rows(&state), ind);
-                self.update_state(self.mix_columns(&state), ind);
-                self.update_state(self.addroundkey(&round_key, &state), ind);
+                self.update_state(self.sub_bytes(ind), ind);
+                self.update_state(self.shift_rows(ind), ind);
+                self.update_state(self.mix_columns(ind), ind);
+                self.update_state(self.addroundkey(&round_key, ind), ind);
             }
 
             //Step 4:Final Round(no Mix Columns)
-            self.update_state(self.sub_bytes(&state), ind);
-            self.update_state(self.shift_rows(&state), ind);
+            self.update_state(self.sub_bytes(ind), ind);
+            self.update_state(self.shift_rows(ind), ind);
 
             // read string by each column instead of across rows (TODO: Check if I need shelp)
+            let state = self.states[ind].clone();
             self.update_state(shelp(&state), ind);
-            self.update_state(self.addroundkey(&kw[10], &state), ind);
-
-            //cipher text added to by columns
-            self.update_cipher(&state);
+            self.update_state(self.addroundkey(&kw[10], ind), ind);
         }
+
+        //cipher text added to by columns
+        self.update_cipher();
     }
     /// Replace each byte with another according to a substitution box
-    fn sub_bytes(&self, state: &str) -> String {
+    fn sub_bytes(&self, index: usize) -> String {
         let mut res = String::new();
         let mut w0 = Vec::new(); // 1st row
         let mut w1 = Vec::new(); // 2nd row
         let mut w2 = Vec::new(); // 3rd row
         let mut w3 = Vec::new(); // 4th row
+        let state = &self.states[index];
 
         for j in &[0, 2, 4, 6] {
             w0.push(state[*j..*j + 2].to_string());
@@ -205,17 +208,17 @@ impl AES {
         for i in &w3 {
             res += &i;
         }
-
         res
     }
 
-    fn shift_rows(&self, state: &str) -> String {
+    fn shift_rows(&self, index: usize) -> String {
         //wikipedia: last three state rows of the state are shifted cyclically by 1, 2, and 3
         let mut res = String::new();
         let mut w0 = Vec::new(); //1st row
         let mut w1 = Vec::new(); //2nd row
         let mut w2 = Vec::new(); //3rd row
         let mut w3 = Vec::new(); //4th row
+        let state = &self.states[index];
 
         for j in &[0, 2, 4, 6] {
             w0.push(&state[*j..*j + 2]);
@@ -238,7 +241,7 @@ impl AES {
         w1.rotate_left(1);
         //Third row is shifted cyclically to the left 2 times
         w2.rotate_left(2);
-       	//Last row is shifted cyclically to the left 3 times
+        //Last row is shifted cyclically to the left 3 times
         w3.rotate_left(3);
 
         for i in &w0 {
@@ -254,14 +257,14 @@ impl AES {
         for i in &w3 {
             res += &i;
         }
-
         res
     }
 
     /// Mixing Operation that operates on the columns of the state, combining the four bytes in each column.
-    fn mix_columns(&self, state: &str) -> String {
+    fn mix_columns(&self, index: usize) -> String {
         let mut ii = 0;
         let mut b = Vec::with_capacity(16);
+        let state = &self.states[index];
 
         while ii < 32 {
             b.push(i64::from_str_radix(&state[ii..(ii + 2)], 16).unwrap());
@@ -369,10 +372,11 @@ impl AES {
 
     /// Combine each byte of the state with a block of the round key using bitwise xor.
     /// Important Note: key string will be changed to be by column
-    fn addroundkey(&self, key: &str, state: &str) -> String {
+    fn addroundkey(&self, key: &str, index: usize) -> String {
         let mut keymat = String::new();
         let mut smat = String::new();
         let mut res = String::new();
+        let state = &self.states[index];
 
         //for key
         for ii in &[0, 8, 16, 24] {
@@ -415,7 +419,6 @@ impl AES {
             let i2 = BigUint::parse_bytes(&keymat[*ii..*ii + 2].as_bytes(), 16).unwrap();
             res += &format!("{:02X}", i1 ^ i2);
         }
-        // println!("res: {}", res);
         res
     }
 
@@ -452,7 +455,8 @@ impl AES {
 
         //2.Byte Substitution with S-Box
         for i1 in 0..4 {
-            let tmp = SBOX[i64::from_str_radix(gw3.get_mut(i1).unwrap().as_ref(), 16).unwrap() as usize];
+            let tmp =
+                SBOX[i64::from_str_radix(gw3.get_mut(i1).unwrap().as_ref(), 16).unwrap() as usize];
             gw3.remove(i1); //remove current element at index
             gw3.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
