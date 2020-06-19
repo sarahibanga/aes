@@ -118,10 +118,11 @@ impl AES {
             let state = self.states[ind].clone();
 
             /*Step 1: Key expansion (Make the keys for all rounds + 1 more)*/
-            kw[0] = self.key.clone();
+
+            kw.insert(0, self.key.clone());
 
             for i in 1..11 {
-                kw[i] = self.create_keys(&kw[i - 1], i);
+                kw.insert(i, self.create_keys(&kw[i - 1], i));
             }
 
             //Step 2 : Initial Round
