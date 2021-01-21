@@ -152,7 +152,6 @@ impl AES {
     }
     /// Replace each byte with another according to a substitution box
     fn sub_bytes(&self, index: usize) -> String {
-        let mut res = String::new();
         let mut w0 = Vec::new(); // 1st row
         let mut w1 = Vec::new(); // 2nd row
         let mut w2 = Vec::new(); // 3rd row
@@ -196,24 +195,16 @@ impl AES {
             w3.insert(i1, format!("{:02X}", tmp)); //add to index and shift other elements
         }
 
-        for i in &w0 {
-            res += &i;
-        }
-        for i in &w1 {
-            res += &i;
-        }
-        for i in &w2 {
-            res += &i;
-        }
-        for i in &w3 {
-            res += &i;
-        }
+        w0.extend(w1);
+        w0.extend(w2);
+        w0.extend(w3);
+
+        let res = w0.into_iter().collect();
         res
     }
 
     fn shift_rows(&self, index: usize) -> String {
         //wikipedia: last three state rows of the state are shifted cyclically by 1, 2, and 3
-        let mut res = String::new();
         let mut w0 = Vec::new(); //1st row
         let mut w1 = Vec::new(); //2nd row
         let mut w2 = Vec::new(); //3rd row
@@ -244,19 +235,13 @@ impl AES {
         //Last row is shifted cyclically to the left 3 times
         w3.rotate_left(3);
 
-        for i in &w0 {
-            res += &i;
-        }
-        for i in &w1 {
-            res += &i;
-        }
 
-        for i in &w2 {
-            res += &i;
-        }
-        for i in &w3 {
-            res += &i;
-        }
+
+        w0.extend(w1);
+        w0.extend(w2);
+        w0.extend(w3);
+
+        let res = w0.into_iter().collect();
         res
     }
 
@@ -491,20 +476,11 @@ impl AES {
         }
 
         //5.Return round's roundkey
-        let mut res = String::new();
-        for i in &w4 {
-            res += &i;
-        }
-        for i in &w5 {
-            res += &i;
-        }
-        for i in &w6 {
-            res += &i;
-        }
-        for i in &w7 {
-            res += &i;
-        }
+        w4.extend(w5);
+        w4.extend(w6);
+        w4.extend(w7);
 
+        let res = w4.into_iter().collect();
         res
     }
 }
